@@ -72,6 +72,14 @@ while (queue.length) {
 for (const [module, metadata] of Array.from(modules).reverse()) {
   let { code } = metadata
 
+  for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
+    code = code.replace(
+      new RegExp(
+        `require\\(('||")${dependencyName.replace(/[\.\/]/g, '\\$&')}\\1\\)`
+      ),
+      modules.get(dependencyPath).code
+    )
+  }
   metadata.code = code
 }
 
