@@ -42,6 +42,10 @@ const queue = [entryPoint]
 while (queue.length) {
   const module = queue.shift()
 
+  if (allFiles.has(module)) {
+    continue
+  }
+
   allFiles.add(module)
   queue.push(...dependencyResolver.resolve(module))
 }
