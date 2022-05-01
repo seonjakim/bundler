@@ -21,14 +21,14 @@ const requireModule = (name) => {
   return module.exports
 }
 
-define('tomato', function (module, exports, require) {
+define(2, function (module, exports, require) {
   module.exports = 'tomato'
 })
-define('melon', function (module, exports, require) {
+define(1, function (module, exports, require) {
   module.exports = 'melon'
 })
-define('kiwi', function (module, exports, require) {
-  module.exports = 'kiwi' + require('melon') + require('tomato')
+define(0, function (module, exports, require) {
+  module.exports = 'kiwi' + require(1) + require(2)
 })
 
-requireModule('kiwi')
+requireModule(0)
