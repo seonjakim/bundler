@@ -38,6 +38,7 @@ const resolver = new Resolver.default(moduleMap, {
 const seen = new Set()
 const modules = new Map()
 const queue = [entryPoint]
+let id = 0
 while (queue.length) {
   const module = queue.shift()
 
@@ -59,28 +60,37 @@ while (queue.length) {
   )
 
   const code = fs.readFileSync(module, 'utf8')
-  const moduleBody = code.match(/module\.exports\s+=\s+(.*?);/i)?.[1] || ''
 
   const metadata = {
-    code: moduleBody || code,
+    id: id++,
+    code,
     dependencyMap,
   }
   modules.set(module, metadata)
   queue.push(...dependencyMap.values())
 }
 
+const wrapModule = (id, code) =>
+  `define(${id}, function(module, exports, require){\n${code}})`
+
+const output = []
 for (const [module, metadata] of Array.from(modules).reverse()) {
-  let { code } = metadata
+  let { id, code } = metadata
 
   for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
     code = code.replace(
       new RegExp(
         `require\\(('||")${dependencyName.replace(/[\.\/]/g, '\\$&')}\\1\\)`
       ),
-      modules.get(dependencyPath).code
+      `require(${modules.get(dependencyPath).id})`
     )
   }
-  metadata.code = code
+  output.push(wrapModule(id, code))
 }
 
-console.log(module.get(entryPoint).code)
+output.unshift(fs.readFileSync('./require.js', 'utf8'))
+output.push(`requireModule(0)`)
+
+if (options.output) {
+  fs.writeFileSync(options.output, output.join('\n'))
+}
