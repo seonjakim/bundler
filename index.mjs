@@ -37,4 +37,13 @@ const resolver = new Resolver.default(moduleMap, {
 
 const dependencyResolver = new DependencyResolver(resolver, hasteFS)
 
-console.log(dependencyResolver.resolve(entryPoint))
+const allFiles = new Set()
+const queue = [entryPoint]
+while (queue.length) {
+  const module = queue.shift()
+
+  allFiles.add(module)
+  queue.push(...dependencyResolver.resolve(module))
+}
+
+console.log(...allFiles)
