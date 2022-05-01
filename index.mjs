@@ -3,6 +3,8 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { cpus } from 'os'
 import yargs from 'yargs'
+import Resolver from 'jest-resolve'
+import { DependencyResolver } from 'jest-resolve-dependencies'
 
 // root of the product code
 const root = join(dirname(fileURLToPath(import.meta.url)), 'product')
@@ -26,3 +28,13 @@ if (!hasteFS.exists(entryPoint)) {
 }
 
 hasteFS.getDependencies(entryPoint)
+
+const resolver = new Resolver.default(moduleMap, {
+  extensions: ['.js'],
+  hasCoreModules: false,
+  rootDir: root,
+})
+
+const dependencyResolver = new DependencyResolver(resolver, hasteFS)
+
+console.log(dependencyResolver.resolve(entryPoint))
