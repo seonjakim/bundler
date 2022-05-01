@@ -4,7 +4,6 @@ import { fileURLToPath } from 'url'
 import { cpus } from 'os'
 import yargs from 'yargs'
 import Resolver from 'jest-resolve'
-import { DependencyResolver } from 'jest-resolve-dependencies'
 import fs from 'fs'
 
 // root of the product code
@@ -36,28 +35,44 @@ const resolver = new Resolver.default(moduleMap, {
   rootDir: root,
 })
 
-const dependencyResolver = new DependencyResolver(resolver, hasteFS)
-
-const allFiles = new Set()
+const seen = new Set()
+const modules = new Map()
 const queue = [entryPoint]
 while (queue.length) {
   const module = queue.shift()
 
-  if (allFiles.has(module)) {
+  if (seen.has(module)) {
     continue
   }
 
-  allFiles.add(module)
-  queue.push(...dependencyResolver.resolve(module))
+  seen.add(module)
+
+  // entry-point: Map<string, string>
+  // ['./apple', '/path/to/apple.js']
+  const dependencyMap = new Map(
+    hasteFS
+      .getDependencies(module)
+      .map((dependencyName) => [
+        dependencyName,
+        resolver.resolveModule(module, dependencyName),
+      ])
+  )
+
+  const code = fs.readFileSync(module, 'utf8')
+  const moduleBody = code.match(/module\.exports\s+=\s+(.*?);/i)?.[1] || ''
+
+  const metadata = {
+    code: moduleBody || code,
+    dependencyMap,
+  }
+  modules.set(module, metadata)
+  queue.push(...dependencyMap.values())
 }
 
-console.log(...allFiles)
+for (const [module, metadata] of Array.from(modules).reverse()) {
+  let { code } = metadata
 
-const allCode = []
-// serializing bundle
-await Promise.all(
-  Array.from(allFiles).map(async (file) => {
-    const code = await fs.promises.readFile(file, 'utf8')
-    allCode.push(code)
-  })
-)
+  metadata.code = code
+}
+
+console.log(module.get(entryPoint).code)
