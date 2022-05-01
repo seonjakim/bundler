@@ -1,0 +1,13 @@
+{
+  "name": "bundler",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/seonjakim/bundler.git",
+  "author": "<seonja.kim0@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.0.1",
+    "jest-haste-map": "^28.0.2",
+    "yargs": "^17.4.1"
+  }
+}
