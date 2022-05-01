@@ -5,6 +5,7 @@ import { cpus } from 'os'
 import yargs from 'yargs'
 import Resolver from 'jest-resolve'
 import fs from 'fs'
+import { Worker } from 'jest-worker'
 
 // root of the product code
 const root = join(dirname(fileURLToPath(import.meta.url)), 'product')
@@ -19,6 +20,14 @@ const hasteMap = new JestHasteMap.default({
 })
 
 const { hasteFS, moduleMap } = await hasteMap.build()
+
+const worker = new Worker(
+  join(dirname(fileURLToPath(import.meta.url)), './worker'),
+  {
+    enableWorkerThreads: true,
+  }
+)
+
 const options = yargs(process.argv).argv
 const entryPoint = options.entryPoint
 if (!hasteFS.exists(entryPoint)) {
@@ -73,24 +82,34 @@ while (queue.length) {
 const wrapModule = (id, code) =>
   `define(${id}, function(module, exports, require){\n${code}})`
 
-const output = []
-for (const [module, metadata] of Array.from(modules).reverse()) {
-  let { id, code } = metadata
+const results = await Promise.all(
+  Array.from(modules)
+    .reverse()
+    .map(async ([module, { id, code, dependencyMap }]) => {
+      ;({ code } = await worker.transformFile(code))
 
-  for (const [dependencyName, dependencyPath] of metadata.dependencyMap) {
-    code = code.replace(
-      new RegExp(
-        `require\\(('||")${dependencyName.replace(/[\.\/]/g, '\\$&')}\\1\\)`
-      ),
-      `require(${modules.get(dependencyPath).id})`
-    )
-  }
-  output.push(wrapModule(id, code))
-}
+      for (const [dependencyName, dependencyPath] of dependencyMap) {
+        code = code.replace(
+          new RegExp(
+            `require\\(('||")${dependencyName.replace(/[\.\/]/g, '\\$&')}\\1\\)`
+          ),
+          `require(${modules.get(dependencyPath).id})`
+        )
+      }
+      return wrapModule(id, code)
+    })
+)
 
-output.unshift(fs.readFileSync('./require.js', 'utf8'))
-output.push(`requireModule(0)`)
+const output = [
+  fs.readFileSync('./require.js', 'utf8'),
+  ...results,
+  `requireModule(0)`,
+].join('\n')
+
+console.log(output)
 
 if (options.output) {
   fs.writeFileSync(options.output, output.join('\n'))
 }
+
+worker.end()
