@@ -13,6 +13,8 @@ const requireModule = (name) => {
     exports: {},
   }
 
+  const moduleFactory = modules.get(name)
+
   moduleCache.set(name, module)
   // could have circular dependencies problem
   moduleFactory(module, module.exports, requireModule)
@@ -28,3 +30,5 @@ define('melon', function (module, exports, require) {
 define('kiwi', function (module, exports, require) {
   module.exports = 'kiwi' + require('melon') + require('tomato')
 })
+
+requireModule('kiwi')
