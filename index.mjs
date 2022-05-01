@@ -5,6 +5,7 @@ import { cpus } from 'os'
 import yargs from 'yargs'
 import Resolver from 'jest-resolve'
 import { DependencyResolver } from 'jest-resolve-dependencies'
+import fs from 'fs'
 
 // root of the product code
 const root = join(dirname(fileURLToPath(import.meta.url)), 'product')
@@ -51,3 +52,12 @@ while (queue.length) {
 }
 
 console.log(...allFiles)
+
+const allCode = []
+// serializing bundle
+await Promise.all(
+  Array.from(allFiles).map(async (file) => {
+    const code = await fs.promises.readFile(file, 'utf8')
+    allCode.push(code)
+  })
+)
