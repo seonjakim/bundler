@@ -13,9 +13,9 @@ const requireModule = (name) => {
     exports: {},
   }
 
+  moduleCache.set(name, module)
   // could have circular dependencies problem
   moduleFactory(module, module.exports, requireModule)
-  moduleCache.set(name, module)
   return module.exports
 }
 
